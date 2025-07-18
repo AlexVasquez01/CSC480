@@ -84,3 +84,56 @@ def depth_first_search(start_state, grid):
         stack.extend(neighbors)
 
     return None, nodes_generated, nodes_expanded
+
+def uniform_cost_search(start_state, grid):
+    frontier = []
+    heapq.heappush(frontier, (0, start_state))
+    visited = {}
+
+    nodes_generated = 0
+    nodes_expanded = 0
+
+    while frontier:
+        cost, state = heapq.heappop(frontier)
+        if state in visited and visited[state] <= cost:
+            continue
+        visited[state] = cost
+        nodes_expanded += 1
+        if state.is_goal():
+            return state.path, nodes_generated, nodes_expanded
+        neighbors = get_neighbors(state, grid)
+        nodes_generated += len(neighbors)
+        for neighbor in neighbors:
+            heapq.heappush(frontier, (neighbor.cost, neighbor))
+
+    return None, nodes_generated, nodes_expanded
+
+def main():
+    if len(sys.argv) != 3:
+        print("Wrong format: python3 planner.py [uniform-cost|depth-first] [world-file]")
+        return
+
+    algorithm = sys.argv[1]
+    filename = sys.argv[2]
+
+    grid, start, dirty = read_world(filename)
+    start_state = VacuumState(start, dirty)
+
+    if algorithm == "depth-first":
+        path, generated, expanded = depth_first_search(start_state, grid)
+    elif algorithm == "uniform-cost":
+        path, generated, expanded = uniform_cost_search(start_state, grid)
+    else:
+        print("use 'depth-first' or 'uniform-cost'")
+        return
+
+    if path is not None:
+        for action in path:
+            print(action)
+        print(f"{generated} nodes generated")
+        print(f"{expanded} nodes expanded")
+    else:
+        print("no sol found.")
+
+if __name__ == "__main__":
+    main()
