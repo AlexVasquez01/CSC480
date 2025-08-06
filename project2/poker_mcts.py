@@ -2,6 +2,19 @@ import random
 import math
 from collections import Counter
 
+class MCTSNode:
+    def __init__(self, state, parent=None):
+        self.state = state
+        self.parent = parent
+        self.children = []
+        self.wins = 0
+        self.visits = 0
+
+def ucb1(node, c=math.sqrt(2)):
+    if node.visits == 0:
+        return float('inf')
+    return (node.wins / node.visits) + c * math.sqrt(math.log(node.parent.visits) / node.visits)
+
 SUITS = ['C', 'D', 'H', 'S']
 RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
 ALL_CARDS = [r + s for r in RANKS for s in SUITS]
