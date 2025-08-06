@@ -21,9 +21,10 @@ def eval_hand(cards):
     is_flush = len(set(suits)) == 1
     is_straight = False
     rank_values = sorted([ranks.index(v) for v in set(values)])
-    for i in range(len(rank_values) - 4 + 1):
-        if rank_values[i+4] - rank_values[i] == 4:
-            is_straight = True
+    if len(rank_values) >= 5:
+        for i in range(len(rank_values) - 4):
+            if rank_values[i+4] - rank_values[i] == 4:
+                is_straight = True
     if not is_straight and set(['A', '2', '3', '4', '5']).issubset(values):
         is_straight = True
     score = 0
@@ -63,8 +64,9 @@ def compare_hands(player_hand, opponent_hand):
     return 0.5
 
 class MCTSNode:
-    def __init__(self, state, parent=None):
+    def __init__(self, state, used_cards, parent=None):
         self.state = state
+        self.used_cards = used_cards[:]
         self.parent = parent
         self.children = []
         self.wins = 0
@@ -97,10 +99,17 @@ def expand(node):
     return random.choice(node.children) if node.children else node
 
 def simulate(state, player_cards, opponent_cards):
-    community = state
+    community = state[:]
+    deck = remove_cards(ALL_CARDS, player_cards + opponent_cards + community)
+    while len(community) < 5:
+        new_card = random.choice(deck)
+        community.append(new_card)
+        deck.remove(new_card)
+
     player_full = player_cards + community
     opponent_full = opponent_cards + community
     return compare_hands(player_full, opponent_full)
+
 
 def backpropagate(node, result):
     while node:
@@ -109,13 +118,12 @@ def backpropagate(node, result):
         node = node.parent
 
 def mcts(player_cards, num_simulations=1000):
-    deck = remove_cards(ALL_CARDS, player_cards)
-    opponent_cards = random_cards(deck, 2)
-    deck = remove_cards(deck, opponent_cards)
-
-    root = MCTSNode([], player_cards + opponent_cards)
+    root = MCTSNode([], player_cards)
 
     for _ in range(num_simulations):
+        deck = remove_cards(ALL_CARDS, player_cards)
+        opponent_cards = random_cards(deck, 2)
+        deck = remove_cards(deck, opponent_cards)
         node = select(root)
         node = expand(node)
         result = simulate(node.state, player_cards, opponent_cards)
@@ -123,3 +131,19 @@ def mcts(player_cards, num_simulations=1000):
 
     return root.wins / root.visits if root.visits > 0 else 0.0
 
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) != 3:
+        print("usage: python poker_mcts.py <card1> <card2>")
+        sys.exit(1)
+
+    hole_cards = [sys.argv[1].upper(), sys.argv[2].upper()]
+    for card in hole_cards:
+        if card not in ALL_CARDS:
+            print(f"invalid card: {card}")
+            sys.exit(1)
+
+    win_rate = mcts(hole_cards, num_simulations=1000)
+    print(f"estimated win rate: {hole_cards[0]} {hole_cards[1]}: {win_rate:.4f}")
