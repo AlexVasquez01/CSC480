@@ -1,19 +1,7 @@
 import random
 import math
+import itertools
 from collections import Counter
-
-class MCTSNode:
-    def __init__(self, state, parent=None):
-        self.state = state
-        self.parent = parent
-        self.children = []
-        self.wins = 0
-        self.visits = 0
-
-def ucb1(node, c=math.sqrt(2)):
-    if node.visits == 0:
-        return float('inf')
-    return (node.wins / node.visits) + c * math.sqrt(math.log(node.parent.visits) / node.visits)
 
 SUITS = ['C', 'D', 'H', 'S']
 RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
@@ -57,11 +45,32 @@ def eval_hand(cards):
         score = 1
     return score, sorted([ranks.index(v) for v in values], reverse=True)
 
+def evaluate_best_hand(cards):
+    best_score = (-1, [])
+    for combo in itertools.combinations(cards, 5):
+        score = eval_hand(combo)
+        if score > best_score:
+            best_score = score
+    return best_score
+
 def compare_hands(player_hand, opponent_hand):
-    p_score = eval_hand(player_hand)
-    o_score = eval_hand(opponent_hand)
+    p_score = evaluate_best_hand(player_hand)
+    o_score = evaluate_best_hand(opponent_hand)
     if p_score > o_score:
         return 1
     elif p_score < o_score:
         return 0
     return 0.5
+
+class MCTSNode:
+    def __init__(self, state, parent=None):
+        self.state = state
+        self.parent = parent
+        self.children = []
+        self.wins = 0
+        self.visits = 0
+
+def ucb1(node, c=math.sqrt(2)):
+    if node.visits == 0:
+        return float('inf')
+    return (node.wins / node.visits) + c * math.sqrt(math.log(node.parent.visits) / node.visits)
