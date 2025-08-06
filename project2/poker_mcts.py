@@ -119,7 +119,6 @@ def backpropagate(node, result):
 
 def mcts(player_cards, num_simulations=1000):
     root = MCTSNode([], player_cards)
-
     for _ in range(num_simulations):
         deck = remove_cards(ALL_CARDS, player_cards)
         opponent_cards = random_cards(deck, 2)
@@ -128,22 +127,18 @@ def mcts(player_cards, num_simulations=1000):
         node = expand(node)
         result = simulate(node.state, player_cards, opponent_cards)
         backpropagate(node, result)
-
     return root.wins / root.visits if root.visits > 0 else 0.0
 
 
 if __name__ == "__main__":
     import sys
-
     if len(sys.argv) != 3:
         print("usage: python poker_mcts.py <card1> <card2>")
         sys.exit(1)
-
     hole_cards = [sys.argv[1].upper(), sys.argv[2].upper()]
     for card in hole_cards:
         if card not in ALL_CARDS:
             print(f"invalid card: {card}")
             sys.exit(1)
-
     win_rate = mcts(hole_cards, num_simulations=1000)
-    print(f"estimated win rate: {hole_cards[0]} {hole_cards[1]}: {win_rate:.4f}")
+    print(f"estimated win rate for {hole_cards[0]} {hole_cards[1]} is {win_rate:.4f}")
