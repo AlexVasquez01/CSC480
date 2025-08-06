@@ -80,16 +80,21 @@ def select(node):
         node = max(node.children, key=ucb1)
     return node
 
-def expand(node, deck):
+def expand(node):
     if len(node.state) == 5:
         return node  #river
-    for _ in range(5 - len(node.state)):
-        new_card = random.choice(deck)
-        new_state = node.state + [new_card]
-        deck = remove_cards(deck, [new_card])
-        child = MCTSNode(new_state, node)
+    available_cards = remove_cards(ALL_CARDS, node.used_cards)
+    random.shuffle(available_cards)
+    added = 0
+    for card in available_cards:
+        if added >= 1000:
+            break
+        new_state = node.state + [card]
+        new_used = node.used_cards + [card]
+        child = MCTSNode(new_state, new_used, parent=node)
         node.children.append(child)
-    return node.children[-1]
+        added += 1
+    return random.choice(node.children) if node.children else node
 
 def simulate(state, player_cards, opponent_cards):
     community = state
@@ -103,18 +108,18 @@ def backpropagate(node, result):
         node.wins += result
         node = node.parent
 
-def estimate_win_rate(hole_cards, num_simulations=1000):
-    wins = 0
+def mcts(player_cards, num_simulations=1000):
+    deck = remove_cards(ALL_CARDS, player_cards)
+    opponent_cards = random_cards(deck, 2)
+    deck = remove_cards(deck, opponent_cards)
+
+    root = MCTSNode([], player_cards + opponent_cards)
+
     for _ in range(num_simulations):
-        deck = remove_cards(ALL_CARDS, hole_cards)
-        opponent = random_cards(deck, 2)
-        deck = remove_cards(deck, opponent)
-        community = random_cards(deck, 5)
+        node = select(root)
+        node = expand(node)
+        result = simulate(node.state, player_cards, opponent_cards)
+        backpropagate(node, result)
 
-        player_hand = hole_cards + community
-        opponent_hand = opponent + community
-
-        result = compare_hands(player_hand, opponent_hand)
-        wins += result
-    return wins / num_simulations
+    return root.wins / root.visits if root.visits > 0 else 0.0
 
